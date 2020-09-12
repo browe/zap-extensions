@@ -218,6 +218,28 @@ public class BodyGenerator {
         return "";
     }
 
+    @SuppressWarnings("rawtypes")
+    public String generateXml(Schema<?> schema) {
+        Map<String, Schema> properties = schema.getProperties();
+        if (properties == null) {
+            return "";
+        }
+
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+
+        String topTagName = schema.getXml().getName();
+        xml.append("<" + topTagName + ">\n");
+        for (Map.Entry<String, Schema> property : properties.entrySet()) {
+            xml.append("\t<" + property.getKey() + ">");
+            xml.append(dataGenerator.generateValue(property.getKey(), property.getValue(), false));
+            xml.append("</" + property.getKey() + ">\n");
+        }
+        xml.append("</" + topTagName + ">\n");
+
+        return xml.toString();
+    }
+
     private static String urlEncode(String string) {
         try {
             return URLEncoder.encode(string, StandardCharsets.UTF_8.name());

@@ -86,8 +86,8 @@ class HeadersGeneratorUnitTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"text/plain", "application/xml"})
-    void shouldNotGenerateContentTypeIfNotJsonNorWwwFormUrlEncoded(String mediaType) {
+    @ValueSource(strings = {"text/plain", "application/octet-stream"})
+    void shouldNotGenerateContentTypeIfNotJsonNorWwwFormUrlEncodedNorXml(String mediaType) {
         // Given
         RequestBody request = mockRequestWithMediaTypes(mediaType);
         Operation operation = mockOperationWithRequest(request);
@@ -125,11 +125,25 @@ class HeadersGeneratorUnitTest {
         assertThat(headers, contains(header("Content-Type", mediaType)));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"application/xml", "application/XML", "text/xml", "text/XML"})
+    void shouldGenerateXmlContentType(String mediaType) {
+        // Given
+        RequestBody request = mockRequestWithMediaTypes(mediaType);
+        Operation operation = mockOperationWithRequest(request);
+        List<HttpHeaderField> headers = new ArrayList<>();
+        // When
+        headersGenerator.generateContentTypeHeaders(operation, headers);
+        // Then
+        assertThat(headers, contains(header("Content-Type", mediaType)));
+    }
+
     @Test
     void shouldGenerateJustFirstSupportedContentType() {
         // Given
         RequestBody request =
-                mockRequestWithMediaTypes("application/json", "application/x-www-form-urlencoded");
+                mockRequestWithMediaTypes(
+                        "application/json", "application/x-www-form-urlencoded", "application/xml");
         Operation operation = mockOperationWithRequest(request);
         List<HttpHeaderField> headers = new ArrayList<>();
         // When

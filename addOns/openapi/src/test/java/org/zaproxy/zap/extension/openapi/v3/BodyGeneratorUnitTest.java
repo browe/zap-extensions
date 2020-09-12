@@ -19,8 +19,7 @@
  */
 package org.zaproxy.zap.extension.openapi.v3;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
@@ -41,6 +40,16 @@ public class BodyGeneratorUnitTest {
     @BeforeEach
     public void init() {
         generators = new Generators(null);
+    }
+
+    @Test
+    public void shouldGenerateXml() throws IOException {
+        OpenAPI openAPI = parseResource("OpenApi_defn_xml.yaml");
+        String xml =
+                generators
+                        .getBodyGenerator()
+                        .generateXml(openAPI.getComponents().getSchemas().get("Tag"));
+        assertNotNull(xml);
     }
 
     @Test

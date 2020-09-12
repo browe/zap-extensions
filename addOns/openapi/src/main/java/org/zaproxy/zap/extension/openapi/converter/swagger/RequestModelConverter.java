@@ -73,6 +73,10 @@ public class RequestModelConverter {
                     || content.containsKey("multipart/form-data")) {
                 return "";
             }
+            if (content.containsKey("application/xml")) {
+                schema = content.get("application/xml").getSchema();
+                return generators.getBodyGenerator().generateXml(schema);
+            }
 
             if (!content.isEmpty()) {
                 schema = content.entrySet().iterator().next().getValue().getSchema();
