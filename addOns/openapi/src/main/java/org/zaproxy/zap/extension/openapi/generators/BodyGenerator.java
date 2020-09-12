@@ -24,13 +24,22 @@ import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
 
 public class BodyGenerator {
 
@@ -224,20 +233,32 @@ public class BodyGenerator {
         if (properties == null) {
             return "";
         }
+        try {
+            Document xmlDoc =
+                    DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
 
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            String topTagName = schema.getXml().getName();
+            org.w3c.dom.Element root = xmlDoc.createElement(topTagName);
+            xmlDoc.appendChild(root);
 
-        String topTagName = schema.getXml().getName();
-        xml.append("<" + topTagName + ">\n");
-        for (Map.Entry<String, Schema> property : properties.entrySet()) {
-            xml.append("\t<" + property.getKey() + ">");
-            xml.append(dataGenerator.generateValue(property.getKey(), property.getValue(), false));
-            xml.append("</" + property.getKey() + ">\n");
+            for (Map.Entry<String, Schema> property : properties.entrySet()) {
+                org.w3c.dom.Element propertyElement = xmlDoc.createElement(property.getKey());
+                propertyElement.appendChild(
+                        xmlDoc.createTextNode(
+                                dataGenerator.generateBodyValue(
+                                        property.getKey(), property.getValue())));
+                root.appendChild(propertyElement);
+            }
+
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+
+            StringWriter writer = new StringWriter();
+            transformer.transform(new DOMSource(xmlDoc), new StreamResult(writer));
+            return writer.getBuffer().toString();
+        } catch (ParserConfigurationException | TransformerException ex) {
+            return "";
         }
-        xml.append("</" + topTagName + ">\n");
-
-        return xml.toString();
     }
 
     private static String urlEncode(String string) {
