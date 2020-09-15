@@ -19,6 +19,7 @@
  */
 package org.zaproxy.zap.extension.openapi.converter.swagger;
 
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
@@ -31,10 +32,12 @@ import org.zaproxy.zap.extension.openapi.network.RequestModel;
 
 public class RequestModelConverter {
 
+    private OpenAPI openAPI;
     private OperationModel operationModel;
     private Generators generators;
 
-    public RequestModel convert(OperationModel operationModel, Generators generators) {
+    public RequestModel convert(
+            OpenAPI openAPI, OperationModel operationModel, Generators generators) {
         this.generators = generators;
         this.operationModel = operationModel;
         RequestModel requestModel = new RequestModel();
@@ -75,7 +78,7 @@ public class RequestModelConverter {
             }
             if (content.containsKey("application/xml")) {
                 schema = content.get("application/xml").getSchema();
-                return generators.getBodyGenerator().generateXml(schema);
+                return generators.getBodyGenerator().generateXml(openAPI, schema);
             }
 
             if (!content.isEmpty()) {

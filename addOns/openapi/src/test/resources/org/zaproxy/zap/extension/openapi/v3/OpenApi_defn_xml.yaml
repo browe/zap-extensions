@@ -50,5 +50,22 @@ components:
           format: int64
         name:
           type: string
+        flavor:
+          type: string
+          xml:
+            attribute: true
+        flowers:
+          type: array
+          items:
+            type: string
+            xml:
+              name: flower
+          example:
+            - 'one'
+            - 'two'
+            - 'three'
+          xml:
+            wrapped: true
       xml:
         name: Tag
+        namespace: http://namespaces.org/boo

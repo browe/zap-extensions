@@ -48,7 +48,7 @@ public class BodyGeneratorUnitTest {
         String xml =
                 generators
                         .getBodyGenerator()
-                        .generateXml(openAPI.getComponents().getSchemas().get("Tag"));
+                        .generateXml(openAPI, openAPI.getComponents().getSchemas().get("Tag"));
         assertNotNull(xml);
     }
 
@@ -116,6 +116,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         null, openAPI.getPaths().get("/pet").getPost(), null),
                                 generators)
@@ -131,6 +132,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pet/{petId}",
                                         openAPI.getPaths().get("/pet/{petId}").getPost(),
@@ -146,6 +148,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pet", openAPI.getPaths().get("/pet").getPost(), null),
                                 generators)
@@ -161,6 +164,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pet", openAPI.getPaths().get("/pet").getPost(), null),
                                 generators)
@@ -174,6 +178,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets", openAPI.getPaths().get("/pets").getPatch(), null),
                                 generators)
@@ -189,6 +194,7 @@ public class BodyGeneratorUnitTest {
         String requestBody =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets", openAPI.getPaths().get("/pets").getPatch(), null),
                                 generators)
@@ -202,6 +208,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets", openAPI.getPaths().get("/pets").getPatch(), null),
                                 generators)
@@ -215,6 +222,7 @@ public class BodyGeneratorUnitTest {
         String requestType =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets", openAPI.getPaths().get("/pets").getPatch(), null),
                                 generators)
@@ -224,6 +232,7 @@ public class BodyGeneratorUnitTest {
         String requestAge =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets", openAPI.getPaths().get("/pets").getGet(), null),
                                 generators)
@@ -238,6 +247,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/v4/endpoint",
                                         openAPI.getPaths().get("/v4/endpoint").getPost(),
@@ -255,6 +265,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/v3/openapi/mapString",
                                         openAPI.getPaths().get("/v3/openapi/mapString").getPost(),
@@ -270,6 +281,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/v3/openapi/mapNumber",
                                         openAPI.getPaths().get("/v3/openapi/mapNumber").getPost(),
@@ -285,6 +297,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/v3/openapi/mapBoolean",
                                         openAPI.getPaths().get("/v3/openapi/mapBoolean").getPost(),
@@ -300,6 +313,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/v3/openapi/mapObject",
                                         openAPI.getPaths().get("/v3/openapi/mapObject").getPost(),
@@ -317,6 +331,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets-with-example",
                                         openAPI.getPaths().get("/pets-with-example").getPost(),
@@ -333,6 +348,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets-with-array-example",
                                         openAPI.getPaths()
@@ -351,6 +367,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets-with-array-full-example-string",
                                         openAPI.getPaths()
@@ -370,6 +387,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/pets-with-array-full-example-yaml",
                                         openAPI.getPaths()
@@ -389,6 +407,7 @@ public class BodyGeneratorUnitTest {
         String request =
                 new RequestModelConverter()
                         .convert(
+                                openAPI,
                                 new OperationModel(
                                         "/media-type-no-schema",
                                         openAPI.getPaths().get("/media-type-no-schema").getPost(),

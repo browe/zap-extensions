@@ -155,20 +155,20 @@ public class SwaggerConverter implements Converter {
 
     @Override
     public List<RequestModel> getRequestModels() throws SwaggerException {
-        List<OperationModel> operations = readOpenAPISpec();
-        return convertToRequest(operations);
+        OpenAPI openAPI = getOpenAPI();
+        List<OperationModel> operations = readOpenAPISpec(openAPI);
+        return convertToRequest(openAPI, operations);
     }
 
-    private List<RequestModel> convertToRequest(List<OperationModel> operations) {
+    private List<RequestModel> convertToRequest(OpenAPI openAPI, List<OperationModel> operations) {
         List<RequestModel> requests = new LinkedList<>();
         for (OperationModel operation : operations) {
-            requests.add(requestConverter.convert(operation, generators));
+            requests.add(requestConverter.convert(openAPI, operation, generators));
         }
         return requests;
     }
 
-    private List<OperationModel> readOpenAPISpec() throws SwaggerException {
-        OpenAPI openAPI = getOpenAPI();
+    private List<OperationModel> readOpenAPISpec(OpenAPI openAPI) throws SwaggerException {
         if (openAPI == null) {
             throw new SwaggerException(
                     Constant.messages.getString(BASE_KEY_I18N + "parse.defn.exception", defn));

@@ -21,16 +21,16 @@ package org.zaproxy.zap.extension.openapi.generators;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.core.util.Json;
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.XML;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
@@ -39,6 +39,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 
 public class BodyGenerator {
@@ -227,27 +228,35 @@ public class BodyGenerator {
         return "";
     }
 
-    @SuppressWarnings("rawtypes")
-    public String generateXml(Schema<?> schema) {
-        Map<String, Schema> properties = schema.getProperties();
-        if (properties == null) {
+    private static String urlEncode(String string) {
+        try {
+            return URLEncoder.encode(string, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException ignore) {
+            // Shouldn't happen, standard charset.
             return "";
         }
+    }
+
+    @SuppressWarnings("rawtypes")
+    public String generateXml(OpenAPI openAPI, Schema<?> schema) {
+        Map<String, Schema> properties = schema.getProperties();
+        if (properties == null) {
+            properties = Collections.emptyMap();
+        }
+
         try {
             Document xmlDoc =
                     DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
 
-            String topTagName = schema.getXml().getName();
-            org.w3c.dom.Element root = xmlDoc.createElement(topTagName);
+            XmlTagInformation topTagInfo =
+                    XmlTagInformation.createWithDefaultNameFromSchemaKey(
+                            openAPI.getComponents().getSchemas(), schema);
+            org.w3c.dom.Element root = xmlDoc.createElement(topTagInfo.getName().get());
             xmlDoc.appendChild(root);
 
+            XmlSchemaCreator creator = new XmlSchemaCreator(xmlDoc);
             for (Map.Entry<String, Schema> property : properties.entrySet()) {
-                org.w3c.dom.Element propertyElement = xmlDoc.createElement(property.getKey());
-                propertyElement.appendChild(
-                        xmlDoc.createTextNode(
-                                dataGenerator.generateBodyValue(
-                                        property.getKey(), property.getValue())));
-                root.appendChild(propertyElement);
+                creator.process(root, property);
             }
 
             TransformerFactory tf = TransformerFactory.newInstance();
@@ -255,18 +264,137 @@ public class BodyGenerator {
 
             StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(xmlDoc), new StreamResult(writer));
-            return writer.getBuffer().toString();
+            return writer.toString();
         } catch (ParserConfigurationException | TransformerException ex) {
+            // TODO: SwaggerException
             return "";
         }
     }
 
-    private static String urlEncode(String string) {
-        try {
-            return URLEncoder.encode(string, StandardCharsets.UTF_8.name());
-        } catch (UnsupportedEncodingException ignore) {
-            // Shouldn't happen, standard charset.
-            return "";
+    private class XmlSchemaCreator {
+        private final Document xml;
+
+        public XmlSchemaCreator(Document document) {
+            this.xml = document;
+        }
+
+        @SuppressWarnings("rawtypes")
+        public void process(org.w3c.dom.Element parent, Map.Entry<String, Schema> property) {
+
+            XmlTagInformation info = XmlTagInformation.createFromSchema(property.getValue());
+            if (property.getValue().getType().equals("array")) {
+                processArray(parent, property);
+                return;
+            }
+
+            String text = dataGenerator.generateValue(property.getKey(), property.getValue(), true);
+            if (info.isAttribute().orElse(false)) {
+                Attr attribute =
+                        xml.createAttributeNS(
+                                info.getNamespace().orElse(null),
+                                info.getName().orElse(property.getKey()));
+                info.getPrefix().ifPresent(prefix -> attribute.setPrefix(prefix));
+                attribute.setNodeValue(text);
+                parent.setAttributeNode(attribute);
+            } else {
+                org.w3c.dom.Element element =
+                        xml.createElementNS(
+                                info.getNamespace().orElse(null),
+                                info.getName().orElse(property.getKey()));
+                info.getPrefix().ifPresent(prefix -> element.setPrefix(prefix));
+                element.appendChild(xml.createTextNode(text));
+                parent.appendChild(element);
+            }
+        }
+
+        @SuppressWarnings("rawtypes")
+        public void processArray(org.w3c.dom.Element parent, Map.Entry<String, Schema> property) {
+            XmlTagInformation info = XmlTagInformation.createFromSchema(property.getValue());
+
+            ArraySchema arraySchema = (ArraySchema) property.getValue();
+            Schema itemsSchema = arraySchema.getItems();
+
+            String name = info.getName().orElse(property.getKey());
+            org.w3c.dom.Element element =
+                    xml.createElementNS(info.getNamespace().orElse(null), name);
+            info.getPrefix().ifPresent(prefix -> element.setPrefix(prefix));
+            process(element, new AbstractMap.SimpleEntry<String, Schema>(name, itemsSchema));
+            parent.appendChild(element);
+        }
+    }
+
+    private static class XmlTagInformation {
+        private final Optional<String> name;
+        private final Optional<String> namespace;
+        private final Optional<String> prefix;
+        private final Optional<Boolean> attribute;
+
+        @SuppressWarnings("rawtypes")
+        public static XmlTagInformation createFromSchema(Schema schema) {
+            return createWithDefaultNameFromSchemaKey(null, schema);
+        }
+
+        @SuppressWarnings("rawtypes")
+        public static XmlTagInformation createWithDefaultNameFromSchemaKey(
+                Map<String, Schema> schemasContext, Schema schema) {
+            XML xmlSchema = schema.getXml();
+            Optional<String> name = Optional.empty();
+            Optional<String> namespace = Optional.empty();
+            Optional<String> prefix = Optional.empty();
+            Optional<Boolean> attribute = Optional.empty();
+
+            if (xmlSchema != null) {
+                name = Optional.ofNullable(xmlSchema.getName());
+                namespace = Optional.ofNullable(xmlSchema.getNamespace());
+                prefix = Optional.ofNullable(xmlSchema.getPrefix());
+                attribute = Optional.ofNullable(xmlSchema.getAttribute());
+            }
+
+            if (!name.isPresent()) {
+                name = getSchemaKeyName(schemasContext, schema);
+            }
+
+            return new XmlTagInformation(name, namespace, prefix, attribute);
+        }
+
+        @SuppressWarnings("rawtypes")
+        private static Optional<String> getSchemaKeyName(
+                Map<String, Schema> schemaMap, Schema schema) {
+            if (schemaMap == null || schemaMap.isEmpty()) {
+                return Optional.empty();
+            }
+
+            return schemaMap.entrySet().stream()
+                    .filter(e -> Optional.of(e.getValue()).map(s -> s.equals(schema)).orElse(false))
+                    .findFirst()
+                    .map(Map.Entry::getKey);
+        }
+
+        public XmlTagInformation(
+                Optional<String> name,
+                Optional<String> namespace,
+                Optional<String> prefix,
+                Optional<Boolean> isAttribute) {
+            this.name = name;
+            this.namespace = namespace;
+            this.prefix = prefix;
+            this.attribute = isAttribute;
+        }
+
+        public Optional<String> getName() {
+            return name;
+        }
+
+        public Optional<String> getNamespace() {
+            return namespace;
+        }
+
+        public Optional<String> getPrefix() {
+            return prefix;
+        }
+
+        public Optional<Boolean> isAttribute() {
+            return attribute;
         }
     }
 }
