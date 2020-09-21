@@ -39,6 +39,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.apache.log4j.Logger;
+import org.graalvm.compiler.core.common.type.ArithmeticOpTable;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 
@@ -288,7 +289,7 @@ public class BodyGenerator {
             }
 
             String text = dataGenerator.generateValue(property.getKey(), property.getValue(), true);
-            if (info.isAttribute().orElse(false)) {
+            if (info.getAttribute().orElse(false)) {
                 Attr attribute =
                         xml.createAttributeNS(
                                 info.getNamespace().orElse(null),
@@ -315,11 +316,15 @@ public class BodyGenerator {
             Schema itemsSchema = arraySchema.getItems();
 
             String name = info.getName().orElse(property.getKey());
-            org.w3c.dom.Element element =
-                    xml.createElementNS(info.getNamespace().orElse(null), name);
-            info.getPrefix().ifPresent(prefix -> element.setPrefix(prefix));
-            process(element, new AbstractMap.SimpleEntry<String, Schema>(name, itemsSchema));
-            parent.appendChild(element);
+            if (info.getWrapped().orElse(false)) {
+                org.w3c.dom.Element element =
+                        xml.createElementNS(info.getNamespace().orElse(null), name);
+                info.getPrefix().ifPresent(prefix -> element.setPrefix(prefix));
+                process(element, new AbstractMap.SimpleEntry<String, Schema>(name, itemsSchema));
+                parent.appendChild(element);
+            } else {
+                process(parent, new AbstractMap.SimpleEntry<String, Schema>(name, itemsSchema));
+            }
         }
     }
 
@@ -328,6 +333,7 @@ public class BodyGenerator {
         private final Optional<String> namespace;
         private final Optional<String> prefix;
         private final Optional<Boolean> attribute;
+        private final Optional<Boolean> wrapped;
 
         @SuppressWarnings("rawtypes")
         public static XmlTagInformation createFromSchema(Schema schema) {
@@ -342,19 +348,21 @@ public class BodyGenerator {
             Optional<String> namespace = Optional.empty();
             Optional<String> prefix = Optional.empty();
             Optional<Boolean> attribute = Optional.empty();
+            Optional<Boolean> wrapped = Optional.empty();
 
             if (xmlSchema != null) {
                 name = Optional.ofNullable(xmlSchema.getName());
                 namespace = Optional.ofNullable(xmlSchema.getNamespace());
                 prefix = Optional.ofNullable(xmlSchema.getPrefix());
                 attribute = Optional.ofNullable(xmlSchema.getAttribute());
+                wrapped = Optional.ofNullable(xmlSchema.getWrapped());
             }
 
             if (!name.isPresent()) {
                 name = getSchemaKeyName(schemasContext, schema);
             }
 
-            return new XmlTagInformation(name, namespace, prefix, attribute);
+            return new XmlTagInformation(name, namespace, prefix, attribute, wrapped);
         }
 
         @SuppressWarnings("rawtypes")
@@ -374,11 +382,13 @@ public class BodyGenerator {
                 Optional<String> name,
                 Optional<String> namespace,
                 Optional<String> prefix,
-                Optional<Boolean> isAttribute) {
+                Optional<Boolean> isAttribute,
+                Optional<Boolean> isWrapped) {
             this.name = name;
             this.namespace = namespace;
             this.prefix = prefix;
             this.attribute = isAttribute;
+            this.wrapped = isWrapped;
         }
 
         public Optional<String> getName() {
@@ -393,8 +403,12 @@ public class BodyGenerator {
             return prefix;
         }
 
-        public Optional<Boolean> isAttribute() {
+        public Optional<Boolean> getAttribute() {
             return attribute;
+        }
+
+        public Optional<Boolean> getWrapped() {
+            return wrapped;
         }
     }
 }
